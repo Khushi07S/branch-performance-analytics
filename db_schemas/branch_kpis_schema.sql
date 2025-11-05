@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS branch_kpis (
+    Branches VARCHAR(255) NOT NULL,
+    Year INTEGER NOT NULL,
+    Quarter INTEGER NOT NULL,
+    State VARCHAR(255),
+    City VARCHAR(255),
+    Region VARCHAR(255),
+    TotalCurrentDeposits BIGINT,
+    TotalSavingsDeposits BIGINT,
+    TotalCASA BIGINT,
+    TotalTermDeposits BIGINT,
+    TotalAggregateDeposits BIGINT,
+    TotalRetailCredit BIGINT,
+    TotalAgricultureCredit BIGINT,
+    TotalBusinessCredit BIGINT,
+    TotalAggregateCredit BIGINT,
+    TotalAggregateBusiness BIGINT,
+    ActiveDays BIGINT,
+    TotalTransactionsCount BIGINT,
+    PRIMARY KEY (Branches, Year, Quarter) -- Composite primary key
+);
