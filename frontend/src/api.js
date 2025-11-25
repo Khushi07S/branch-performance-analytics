@@ -1,13 +1,19 @@
 // frontend/src/api.js
 // Resilient API shim: tries the real backend (REACT_APP_API_BASE / import.meta / window.__API_BASE__)
 // and falls back to an in-memory mock when the real backend is unreachable.
-// This is the version you had when the dashboard worked (it returned your real 100 branches
-// when the backend was up, and used mock data only when the backend was down).
 
-/* Safe environment detection */
 function _getEnvBase() {
+  // CRA: process.env.REACT_APP_API_BASE (available at build time)
   if (typeof process !== "undefined" && process?.env?.REACT_APP_API_BASE) return process.env.REACT_APP_API_BASE;
-  if (typeof import.meta !== "undefined" && import.meta?.env?.VITE_API_BASE) return import.meta.env.VITE_API_BASE;
+  // Vite: import.meta.env.VITE_API_BASE (available at build time) — guard in try/catch
+  try {
+    if (import.meta?.env?.VITE_API_BASE) {
+      return import.meta.env.VITE_API_BASE;
+    }
+  } catch (e) {
+    // ignore
+  }
+  // runtime override (useful for quick testing)
   if (typeof window !== "undefined" && window.__API_BASE__) return window.__API_BASE__;
   return "";
 }
@@ -16,8 +22,13 @@ const API_BASE = (_getEnvBase() || "").replace(/\/$/, "");
 const useReal = Boolean(API_BASE && API_BASE.length);
 
 /* helpers */
-function sleep(ms = 300) { return new Promise(res => setTimeout(res, ms)); }
-function isNetworkError(err) { return err instanceof TypeError; } // fetch throws TypeError on network failure
+function sleep(ms = 300) {
+  return new Promise((res) => setTimeout(res, ms));
+}
+function isNetworkError(err) {
+  // fetch throws TypeError on network failure in browsers
+  return err instanceof TypeError;
+}
 
 async function doFetch(path, opts = {}) {
   if (!useReal) throw new Error("No real API configured");
@@ -25,7 +36,7 @@ async function doFetch(path, opts = {}) {
   const options = {
     method: opts.method || "GET",
     headers: { "Content-Type": "application/json", ...(opts.headers || {}) },
-    credentials: "include",
+    credentials: opts.credentials ?? "include",
     body: opts.body,
   };
   const res = await fetch(url, options);
@@ -42,31 +53,103 @@ async function doFetch(path, opts = {}) {
 
 async function tryRealOrThrow(path, opts = {}) {
   if (!useReal) throw new Error("No real API configured");
-  try { return await doFetch(path, opts); }
-  catch (err) {
-    // network-level error (connection refused, DNS, etc.) -> indicate to caller so fallback can run
+  try {
+    return await doFetch(path, opts);
+  } catch (err) {
     if (isNetworkError(err)) {
       console.warn(`API network error when calling ${API_BASE + path} — will fallback to mock.`, err);
       throw err;
     }
-    // HTTP error (4xx/5xx) -> rethrow so caller can inspect / bubble up
     throw err;
   }
 }
 
 /* in-memory mock store used only as fallback */
 const _mock = {
-  branches: Array.from({ length: 100 }, (_, i) => ({ id: `BR${String(i+1).padStart(3,"0")}`, name: `Branch ${i+1}` })),
+  branches: Array.from({ length: 100 }, (_, i) => ({ id: `BR${String(i + 1).padStart(3, "0")}`, name: `Branch ${i + 1}` })),
   managers: [],
 };
 
+/* Normalizer for branch lists (coerces different backend shapes to stable shape) */
+function _normalizeBranchesList(rawList) {
+  if (!Array.isArray(rawList)) return [];
+  return rawList.map((b) => {
+    const branch_id = b.branch_id ?? b.id ?? b.branchId ?? b.branch ?? null;
+    const name = b.name ?? b.branch_name ?? b.branchName ?? (branch_id ? String(branch_id) : "Unknown");
+    const state = b.state ?? b.region ?? b.state_name ?? b.stateName ?? null;
+    const city = b.city ?? b.town ?? b.city_name ?? b.cityName ?? null;
+    return { branch_id, name, state, city, raw: b };
+  });
+}
+
+/* getBranchesByRegion: tries backend then falls back to mock with state/city */
+async function getBranchesByRegionImpl(regionName) {
+  try {
+    const data = await tryRealOrThrow(`/branches?region=${encodeURIComponent(regionName)}`);
+    // backend might return array or { branches: [...] } or { data: [...] } etc.
+    let list = [];
+    if (Array.isArray(data)) list = data;
+    else if (Array.isArray(data.branches)) list = data.branches;
+    else if (Array.isArray(data.data)) list = data.data;
+    else if (data && typeof data === "object") {
+      // try to extract array-like values
+      const maybeArray = Object.values(data).filter((v) => Array.isArray(v) && v.length);
+      if (maybeArray.length) list = maybeArray[0];
+      else {
+        // fallback to common keys
+        list = data.results ?? data.items ?? [];
+      }
+    }
+    const normalized = _normalizeBranchesList(list);
+    return { data: normalized };
+  } catch (err) {
+    // fallback: return mock branches enriched with plausible state/city
+    await sleep(60);
+    const stateSamples = {
+      West: ["Maharashtra", "Gujarat", "Goa"],
+      North: ["Delhi", "Haryana", "Punjab"],
+      South: ["Karnataka", "Tamil Nadu", "Kerala"],
+      East: ["West Bengal", "Odisha", "Bihar"],
+      Central: ["Madhya Pradesh", "Chhattisgarh"],
+    };
+    const citiesByState = {
+      Maharashtra: ["Mumbai", "Pune", "Nagpur"],
+      Gujarat: ["Ahmedabad", "Surat"],
+      Goa: ["Panaji"],
+      Delhi: ["New Delhi"],
+      Haryana: ["Gurgaon", "Faridabad"],
+      Punjab: ["Chandigarh", "Ludhiana"],
+      Karnataka: ["Bengaluru", "Mysore"],
+      "Tamil Nadu": ["Chennai", "Coimbatore"],
+      Kerala: ["Kochi", "Thiruvananthapuram"],
+      "West Bengal": ["Kolkata", "Durgapur"],
+      Odisha: ["Bhubaneswar"],
+      Bihar: ["Patna"],
+      "Madhya Pradesh": ["Bhopal", "Indore"],
+      "Chhattisgarh": ["Raipur"],
+    };
+
+    const states = stateSamples[regionName] ?? stateSamples["Central"];
+    const chosenState = states && states.length ? states[0] : "State";
+    const chosenCity = (citiesByState[chosenState] && citiesByState[chosenState][0]) || "City";
+
+    const mockList = _mock.branches.slice(0, 12).map((b, i) => ({
+      branch_id: b.id,
+      name: b.name,
+      state: chosenState,
+      city: chosenCity + (i > 0 ? ` ${i + 1}` : ""),
+    }));
+    return { data: mockList };
+  }
+}
+
+/* Public API */
 const api = {
   async getBranches() {
     try {
       const data = await tryRealOrThrow("/branches");
       return { data };
     } catch (err) {
-      // fallback to mock
       await sleep(80);
       return { data: _mock.branches };
     }
@@ -91,7 +174,7 @@ const api = {
           totaltermdeposits: Math.round(total * 0.2),
           topBranches: _mock.branches.slice(0, 4).map((b, i) => ({ branch_id: b.id, name: b.name, deposits: Math.round(total / (i + 2)) })),
           monthlyTransactions: Array.from({ length: 6 }, (_, i) => ({ month: `M-${5 - i}`, count: Math.round(1000 + Math.random() * 5000) })),
-        }
+        },
       };
     }
   },
@@ -120,14 +203,9 @@ const api = {
     }
   },
 
+  // normalized branches-by-region that returns objects with branch_id, name, state, city
   async getBranchesByRegion(regionName) {
-    try {
-      const data = await tryRealOrThrow(`/branches?region=${encodeURIComponent(regionName)}`);
-      return { data };
-    } catch (err) {
-      await sleep(60);
-      return { data: _mock.branches.map(b => ({ branch_id: b.id, name: b.name, state: "State", city: "City" })) };
-    }
+    return getBranchesByRegionImpl(regionName);
   },
 
   async getBranchGrid(branchId) {
@@ -146,7 +224,6 @@ const api = {
       return { data };
     } catch (err) {
       await sleep(30);
-      // default mock: admin (change to manager to test manager view)
       return { data: { name: "Alice Admin", role: "admin", branchId: null, email: "alice@example.com" } };
     }
   },
@@ -157,13 +234,13 @@ const api = {
       return { data };
     } catch (err) {
       await sleep(300);
-      const exists = _mock.managers.some(m => m.username === payload.username || m.email === payload.email);
+      const exists = _mock.managers.some((m) => m.username === payload.username || m.email === payload.email);
       if (exists) throw new Error("Username or email already exists (mock)");
       const created = { id: `mgr_${Date.now()}`, ...payload };
       _mock.managers.push(created);
       return { data: { ok: true, created } };
     }
-  }
+  },
 };
 
 export default api;
