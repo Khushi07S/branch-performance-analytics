@@ -8,7 +8,9 @@ class User(db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=True)
     role = db.Column(db.String(20), nullable=False, default='manager')  # 'admin' or 'manager'
-    managed_branch_id = db.Column(db.String(255), db.ForeignKey('branch_kpis_new.branches'), nullable=True)
+        # Just store the branch name / id, no DB-level FK
+    managed_branch_id = db.Column(db.String(255), nullable=True)
+
     needs_password_reset = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

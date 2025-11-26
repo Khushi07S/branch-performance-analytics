@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import InputField from "../ui/InputField.jsx";
 
-const API_BASE_URL = "http://localhost:5000/api/v1";
+const API_BASE_URL = "http://127.0.0.1:5000/api/v1";
 
 export default function LoginScreen({ setToken, setAuthStage, setError }) {
   const [username, setUsername] = useState("");
@@ -15,13 +15,34 @@ export default function LoginScreen({ setToken, setAuthStage, setError }) {
     setError(null);
     setSubmitting(true);
     try {
-      const resp = await axios.post(`${API_BASE_URL}/auth/login`, { username, password }, { headers: { "Content-Type": "application/json" } });
-      if (resp.data.needs_reset) {
-        sessionStorage.setItem("reset_token", resp.data.reset_token);
-        setAuthStage("reset_password");
-      } else {
-        setToken(resp.data.access_token);
-      }
+      const resp = await axios.post(
+  `${API_BASE_URL}/auth/login`,
+  { username, password },
+  { headers: { "Content-Type": "application/json" } }
+);
+
+const { access_token, needs_reset, reset_token, user } = resp.data;
+
+// If backend sends user in a nested object (user: {...})
+// otherwise adjust to resp.data.role if that's how you return it.
+const role = user?.role || resp.data.role;
+
+// 1) Admin: always go straight to dashboard
+if (role === "admin") {
+  setToken(access_token);
+}
+// 2) Manager (or others) that must reset password first
+else if (needs_reset) {
+  if (reset_token) {
+    sessionStorage.setItem("reset_token", reset_token);
+  }
+  setAuthStage("reset_password");
+}
+// 3) Normal login -> dashboard
+else {
+  setToken(access_token);
+}
+
     }  catch (err) {
       console.error("Login error", err.response?.status, err.response?.data, err);
       setError(err.response?.data?.msg || `Login failed (${err.response?.status || err.message})`);

@@ -109,3 +109,39 @@ if __name__ == '__main__':
         traceback.print_exc()
         # Exit non-zero so any script calling this sees failure
         raise
+
+# backend/app.py
+# Add this to your existing app.py
+
+from flask import Flask
+from flask_cors import CORS
+from .extensions import db, bcrypt, jwt
+from .config import Config
+
+# Import blueprints
+from .auth import auth_bp
+from .admin import admin_bp  # ADD THIS
+from .branches import branches_bp
+from .kpis import kpis_bp
+
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
+    
+    # Initialize extensions
+    db.init_app(app)
+    bcrypt.init_app(app)
+    jwt.init_app(app)
+    CORS(app)
+    
+    # Register blueprints
+    app.register_blueprint(auth_bp, url_prefix="/auth")
+    app.register_blueprint(admin_bp, url_prefix="/admin")  # ADD THIS
+    app.register_blueprint(branches_bp, url_prefix="/branches")
+    app.register_blueprint(kpis_bp, url_prefix="/kpis")
+    
+    return app
+
+if __name__ == "__main__":
+    app = create_app()
+    app.run(debug=True)

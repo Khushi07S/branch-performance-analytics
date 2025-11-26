@@ -228,19 +228,85 @@ const api = {
     }
   },
 
-  async createManager(payload) {
+      async createManager(payload) {
+    // We expect VITE_API_BASE / REACT_APP_API_BASE to be something like:
+    //   http://127.0.0.1:5000/api/v1
+    // So this path becomes: /api/v1/admin/auth/create-manager
+
+    const token =
+      (typeof window !== "undefined" &&
+        (localStorage.getItem("access_token") ||
+          localStorage.getItem("token"))) ||
+      null;
+
+    const headers = { "Content-Type": "application/json" };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    // Map the Dashboard fields to what backend expects
+    const effectiveBranchId =
+      payload.managed_branch_id ||
+      payload.branchId ||
+      payload.branch_id ||
+      null;
+
+    const tempPassword = payload.temp_password || payload.password;
+
+    const body = {
+      username: payload.username,
+      email: payload.email,
+      managed_branch_id: effectiveBranchId,
+      temp_password: tempPassword,
+      // extra info (backend can ignore if it doesn’t use it)
+      name: payload.name,
+    };
+
     try {
-      const data = await tryRealOrThrow(`/users`, { method: "POST", body: JSON.stringify(payload) });
+      const data = await tryRealOrThrow(`/admin/auth/create-manager`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+      });
       return { data };
     } catch (err) {
+      console.warn("createManager real API failed, using mock fallback:", err);
+
+      // ---- MOCK FALLBACK (only used if backend is unreachable) ----
       await sleep(300);
-      const exists = _mock.managers.some((m) => m.username === payload.username || m.email === payload.email);
-      if (exists) throw new Error("Username or email already exists (mock)");
-      const created = { id: `mgr_${Date.now()}`, ...payload };
+
+      const exists = _mock.managers.some(
+        (m) =>
+          m.username === payload.username || m.email === payload.email
+      );
+      if (exists) {
+        const e = new Error(
+          "Username or email already exists (mock fallback)"
+        );
+        e.status = 400;
+        throw e;
+      }
+
+      const created = {
+        id: `mgr_${Date.now()}`,
+        username: payload.username,
+        email: payload.email,
+        managed_branch_id: effectiveBranchId,
+        temp_password: tempPassword,
+        name: payload.name,
+      };
       _mock.managers.push(created);
-      return { data: { ok: true, created } };
+
+      return {
+        data: {
+          ok: true,
+          created,
+        },
+      };
     }
   },
+
+
 };
 
 export default api;
