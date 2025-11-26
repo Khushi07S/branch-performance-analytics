@@ -54,27 +54,53 @@ function App() {
       break
     case 'dashboard':
       // require a token for dashboard
-      ComponentToRender = token ? <DashboardScreen token={token} setToken={setToken} setError={setError} logout={logout} /> : <LoginScreen setToken={setToken} setAuthStage={setAuthStage} setError={setError} />
+      ComponentToRender = token ? (
+        <DashboardScreen 
+          token={token} 
+          setToken={setToken} 
+          setError={setError} 
+          logout={logout} 
+        />
+      ) : (
+        <LoginScreen 
+          setToken={setToken} 
+          setAuthStage={setAuthStage} 
+          setError={setError} 
+        />
+      )
       break
     default:
       ComponentToRender = <LoginScreen setToken={setToken} setAuthStage={setAuthStage} setError={setError} />
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ width: '100%', maxWidth: 1200, padding: '2rem' }}>
-        {/* top-left error area (keeps visible while developing) */}
-        {error && (
-          <div style={{ position: 'absolute', top: 12, left: 12, zIndex: 40 }}>
-            <div style={{ background: '#fee2e2', color: '#7f1d1d', padding: '8px 12px', borderRadius: 8, fontWeight: 600 }}>
-              {error}
-            </div>
+    <div 
+      style={{ 
+        minHeight: '100vh', 
+        width: '100%',
+        background: authStage === 'dashboard' ? '#f3f4f6' : '#f9fafb',
+        display: 'flex',
+        alignItems: authStage === 'dashboard' ? 'stretch' : 'center',
+        justifyContent: authStage === 'dashboard' ? 'flex-start' : 'center'
+      }}
+    >
+      {/* top-left error area */}
+      {error && (
+        <div style={{ position: 'absolute', top: 12, left: 12, zIndex: 40 }}>
+          <div style={{ 
+            background: '#fee2e2', 
+            color: '#7f1d1d', 
+            padding: '8px 12px', 
+            borderRadius: 8, 
+            fontWeight: 600 
+          }}>
+            {error}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Render the selected screen */}
-        {ComponentToRender}
-      </div>
+      {/* Render the selected screen */}
+      {ComponentToRender}
     </div>
   )
 }

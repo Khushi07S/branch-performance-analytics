@@ -806,11 +806,11 @@ export default function Dashboard({ currentUser = null }) {
         background: PALETTE.bg,
       }}
     >
-      <aside style={{ width: 220 }}>
-        <Sidebar />
+      <aside style={{ width: 260, flexShrink: 0 }}>
+        <Sidebar/>
       </aside>
 
-      <main style={{ flex: 1, padding: 24 }}>
+      <main style={{ flex: 1, padding: "24px 32px", maxWidth: "100%" }}>
         <header
           style={{
             display: "flex",
@@ -922,8 +922,8 @@ export default function Dashboard({ currentUser = null }) {
         <section
           style={{
             display: "flex",
-            gap: 12,
-            marginBottom: 18,
+            gap: 16,
+            marginBottom: 24,
             flexWrap: "wrap",
           }}
         >
@@ -1063,18 +1063,20 @@ export default function Dashboard({ currentUser = null }) {
         <section
           style={{
             display: "grid",
-            gridTemplateColumns: "minmax(0, 1.7fr) minmax(0, 1fr)",
-            gap: 18,
+            gridTemplateColumns: "minmax(0, 2fr) minmax(360px, 1fr)",
+            gap: 24,
+            alignItems: "flex-start",
           }}
         >
           <div
             style={{
               background: PALETTE.card,
-              padding: 16,
+              padding: 20,
               borderRadius: 12,
+              minHeight: 480,
             }}
           >
-            <h3 style={{ marginTop: 0 }}>Quarterly Trends</h3>
+            <h3 style={{ marginTop: 0, marginBottom: 16 }}>Quarterly Trends</h3>
             <div style={{ height: 360 }}>
               {effectiveSeries &&
               effectiveSeries.labels &&
@@ -1095,17 +1097,17 @@ export default function Dashboard({ currentUser = null }) {
               )}
             </div>
 
-            <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
-              <div style={{ width: 320 }}>
-                <h4 style={{ marginTop: 8 }}>Deposit mix</h4>
-                <div style={{ height: 200 }}>
+            <div style={{ display: "flex", gap: 16, marginTop: 20 }}>
+              <div style={{ width: 280 }}>
+                 <h4 style={{ marginTop: 0, marginBottom: 8 }}>Deposit mix</h4>
+                 <div style={{ height: 220 }}>
                   <DonutChart data={depositMixDonut} />
                 </div>
               </div>
 
-              <div style={{ flex: 1 }}>
-                <h4 style={{ marginTop: 8 }}>Credit composition</h4>
-                <div style={{ height: 220 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h4 style={{ marginTop: 0, marginBottom: 8 }}>Credit composition</h4>
+                <div style={{ height: 220, overflow: "hidden" }}>
                   {creditComponentBar ? (
                     <SimpleBar data={creditComponentBar} />
                   ) : (
@@ -1129,12 +1131,15 @@ export default function Dashboard({ currentUser = null }) {
             <div
               style={{
                 background: PALETTE.card,
-                padding: 12,
+                padding: 16,
                 borderRadius: 12,
+                height: 380,
+                display: "flex",
+                flexDirection: "column",
               }}
             >
-              <h4 style={{ marginTop: 0 }}>Regional Map</h4>
-              <div style={{ height: 240 }}>
+              <h4 style={{ marginTop: 0, marginBottom: 12 }}>Regional Map</h4>
+              <div style={{ flex: 1, minHeight: 320 }}>
                 <IndiaMap
                   regions={regional}
                   onRegionClick={handleRegionClick}
@@ -1147,13 +1152,13 @@ export default function Dashboard({ currentUser = null }) {
             <div
               style={{
                 background: PALETTE.card,
-                padding: 12,
+                padding: 16,
                 borderRadius: 12,
-                maxHeight: 200,
+                maxHeight: 280,
                 overflowY: "auto",
               }}
             >
-              <h4 style={{ marginTop: 0 }}>
+              <h4 style={{ marginTop: 0, marginBottom: 12 }}>
                 Top branches (by deposits)
               </h4>
               {topBranchesList.length === 0 ? (
@@ -1210,14 +1215,15 @@ export default function Dashboard({ currentUser = null }) {
             <div
               style={{
                 background: PALETTE.card,
-                padding: 12,
+                padding: 16,
                 borderRadius: 12,
+                height: 240,
               }}
             >
-              <h4 style={{ marginTop: 0 }}>
+               <h4 style={{ marginTop: 0, marginBottom: 12 }}>
                 Monthly Transaction Summary
               </h4>
-              <div style={{ height: 160 }}>
+              <div style={{ height: 180 }}>
                 {monthlyTransactionBarData ? (
                   <SimpleBar data={monthlyTransactionBarData} />
                 ) : (
