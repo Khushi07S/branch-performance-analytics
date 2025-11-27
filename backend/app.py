@@ -17,7 +17,7 @@ from flask import Flask, request
 from flask_cors import CORS
 
 from .config import Config
-from .extensions import db, jwt, bcrypt
+from .extensions import db, jwt, bcrypt, migrate
 
 # Frontend origins allowed to talk to this API
 ALLOWED_ORIGINS = {
@@ -41,6 +41,8 @@ def create_app(config_class=Config):
     db.init_app(app)
     jwt.init_app(app)
     bcrypt.init_app(app)
+    migrate.init_app(app, db)
+
 
     # Helpful after_request CORS for your React frontend
     @app.after_request
