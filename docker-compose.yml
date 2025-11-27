@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: "${POSTGRES_IMAGE:-postgres:17}"
+    container_name: branch_postgres
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT}:5432"
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.backend
+    container_name: branch_backend
+    command: ["python", "-u", "-m", "backend.app"]
+    env_file:
+      - ./.env
+    environment:
+      - DB_HOST=postgres
+    ports:
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
+    depends_on:
+      - postgres
+    volumes:
+      - ./:/app:delegated
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/Dockerfile.frontend
+    container_name: branch_frontend
+    env_file:
+      - ./.env
+    ports:
+      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
