@@ -760,6 +760,7 @@ export default function Dashboard({ currentUser = null }) {
       password: tempPwd,
       temp_password: tempPwd,
     };
+    console.log("BRANCH VALUE BEFORE SEND:", selectedBranch);
 
     try {
       setMgrSubmitting(true);

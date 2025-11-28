@@ -75,7 +75,7 @@ def create_app(config_class=Config):
         from .kpis import kpis_bp
         from .admin import admin_bp
         from .branches import branches_bp
-
+        
         # NOTE: these prefixes match how your frontend calls the API:
         #  - Login:  /api/v1/auth/login
         #  - Admin:  /api/v1/admin/auth/create-manager

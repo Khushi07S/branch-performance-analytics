@@ -249,6 +249,9 @@ const api = {
       payload.managed_branch_id ||
       payload.branchId ||
       payload.branch_id ||
+      payload.branch ||            // many UIs use this
+      payload.selectedBranch ||    // very common
+      payload.selected_branch || 
       null;
 
     const tempPassword = payload.temp_password || payload.password;
@@ -256,14 +259,14 @@ const api = {
     const body = {
       username: payload.username,
       email: payload.email,
-      managed_branch_id: effectiveBranchId,
-      temp_password: tempPassword,
+      branchId: effectiveBranchId,
+      password: tempPassword,
       // extra info (backend can ignore if it doesn’t use it)
       name: payload.name,
     };
 
     try {
-      const data = await tryRealOrThrow(`/admin/auth/create-manager`, {
+      const data = await tryRealOrThrow(`/admin/create-manager`, {
         method: "POST",
         headers,
         body: JSON.stringify(body),

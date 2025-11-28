@@ -1,22 +1,31 @@
-# backend/branches.py
-from flask import Blueprint, jsonify, current_app
-from sqlalchemy import text
-from .extensions import db
+from flask import Blueprint, jsonify, request
+from backend.extensions import db
+from backend.models import BranchKPIs
 
-branches_bp = Blueprint("branches", __name__, url_prefix="/api/v1")
+branches_bp = Blueprint("branches", __name__)
 
 @branches_bp.route("/branches", methods=["GET"])
-def list_branches():
-    """
-    Returns JSON: { "branches": ["BRANCH-1", "BRANCH-2", ...] }
-    Admin/Manager can call this to populate the branch selector.
-    """
-    try:
-        # Query distinct branch keys from persistent table
-        sql = text("SELECT DISTINCT branches FROM branch_kpis_new ORDER BY branches")
-        res = db.session.execute(sql)
-        rows = [r[0] for r in res.fetchall() if r[0] is not None]
-        return jsonify(branches=rows), 200
-    except Exception as e:
-        current_app.logger.exception("Failed to list branches")
-        return jsonify(msg="Failed to fetch branches", error=str(e)), 500
+def get_all_branches():
+    regions = request.args.get("region")
+
+    query = BranchKPIs.query
+
+    if regions:
+        query = query.filter(BranchKPIs.region == regions)
+
+    rows = query.all()
+
+    # unique by branch_id
+    seen = set()
+    result = []
+    for r in rows:
+        if r.branches not in seen:
+            seen.add(r.branches)
+            result.append({
+                "branch_id": r.branches,
+                "name": r.branches,
+                "state": r.state,
+                "region": r.region,
+            })
+
+    return jsonify(result), 200

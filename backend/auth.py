@@ -101,31 +101,23 @@ def google_login():
 @jwt_required()
 def reset_password():
     data = request.get_json() or {}
-    old_password = data.get('old_password')
     new_password = data.get('new_password')
 
-    if not old_password or not new_password:
-        return jsonify(msg="old_password and new_password required"), 400
+    if not new_password:
+        return jsonify(msg="new_password is required"), 400
 
-    user_id = get_jwt_identity()               # now returns STRING
-    user = User.query.get(int(user_id))        # FIXED → cast back to int
+    # identity is stored as string → convert to int
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
 
     if not user:
         return jsonify(msg="User not found"), 404
 
-    if not user.check_password(old_password):
-        return jsonify(msg="Incorrect current password"), 401
+    # IMPORTANT: Do NOT check old password here
+    # Because this flow is for "needs_password_reset == True"
 
     user.set_password(new_password)
-    user.needs_password_reset = False
+    user.needs_password_reset = False   # 🔥 FIXED FLAG
     db.session.commit()
 
-    new_access_token = create_access_token(
-        identity=str(user.id),                 # FIXED
-        additional_claims={
-            'role': user.role,
-            'branch': user.managed_branch_id
-        }
-    )
-
-    return jsonify(msg="Password updated", access_token=new_access_token), 200
+    return jsonify(msg="Password updated successfully"), 200

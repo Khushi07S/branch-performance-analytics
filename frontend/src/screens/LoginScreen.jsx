@@ -3,8 +3,8 @@ import React, { useState } from "react";
 import axios from "axios";
 import InputField from "../ui/InputField.jsx";
 
-const API_BASE_URL = "http://127.0.0.1:5000/api/v1";
-
+const API_BASE_URL = import.meta.env.VITE_API_BASE;
+console.log("💡 Using API:", API_BASE_URL);
 export default function LoginScreen({ setToken, setAuthStage, setError }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
