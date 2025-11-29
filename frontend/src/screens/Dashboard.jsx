@@ -840,7 +840,7 @@ export default function Dashboard({ currentUser = null }) {
                   marginTop: 6,
                 }}
               >
-                Branch Performance powered by AAASK
+                Branch Performance — powered by AAASK
               </div>
             </div>
           </div>
